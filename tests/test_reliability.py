@@ -77,18 +77,28 @@ def free_port() -> int:
 
 
 def start_server(base, port: int) -> subprocess.Popen:
+    log = open(os.path.join(os.path.dirname(str(base)) or ".", f"server-{port}.log"), "wb")
     process = subprocess.Popen([sys.executable, "-m", "ankicli", "serve", "--base", str(base), "--port", str(port),
-                                "--backup-minutes", "0", "--log-level", "warning"],
-                               stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    deadline = time.time() + 30
-    while time.time() < deadline:
+                                "--backup-minutes", "0", "--log-level", "info"],
+                               stdout=log, stderr=subprocess.STDOUT)
+    process.log_path = log.name
+    started = time.time()
+    while time.time() - started < 120:
+        if process.poll() is not None:
+            break
         try:
-            with urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=1):
+            with urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=2):
                 return process
         except OSError:
-            time.sleep(0.1)
+            time.sleep(0.2)
+    alive = process.poll() is None
     process.kill()
-    raise RuntimeError(process.stderr.read().decode())
+    process.wait(10)
+    log.close()
+    with open(process.log_path, encoding="utf-8", errors="replace") as file:
+        output = file.read()
+    raise RuntimeError(f"server not reachable after {time.time() - started:.1f}s "
+                       f"(alive={alive}, exit={process.returncode}):\n{output}")
 
 
 @POSIX

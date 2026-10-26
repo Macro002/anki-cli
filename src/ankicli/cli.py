@@ -515,6 +515,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # Consoles with a legacy code page (e.g. Windows cp1252) can't print every card
+    # character; replace those instead of crashing.
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(errors="replace")  # type: ignore[union-attr]
+        except (AttributeError, ValueError):
+            pass
     parser = build_parser()
     args = parser.parse_args(argv)
     try:
