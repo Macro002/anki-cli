@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="docs/icon.png" alt="anki-cli" width="128" height="128">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/logo-dark.svg">
+    <img src="docs/logo-light.svg" alt="anki-cli" width="300">
+  </picture>
 </p>
 
 <h1 align="center">anki-cli</h1>
