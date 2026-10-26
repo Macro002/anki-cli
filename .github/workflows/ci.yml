@@ -18,19 +18,19 @@ jobs:
             python: "3.12"
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python }}
-      - run: pip install -e ".[test]"
-      - run: python -m pytest
+      - run: pip install -e ".[test]" pytest-github-actions-annotate-failures
+      - run: python -m pytest -rf
 
   compatibility:
     # Anki-Connect's own client-flow and contract tests, run against anki-cli.
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - run: pip install -e ".[test]"
@@ -39,7 +39,7 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: docker build -t anki-cli .
       - run: |
           docker run -d --name anki -p 8765:8765 -e ANKICLI_API_KEY=ci anki-cli
