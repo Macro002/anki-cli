@@ -1,0 +1,26 @@
+# systemd unit: copy to /etc/systemd/system/anki-cli.service, then
+#   systemctl daemon-reload && systemctl enable --now anki-cli
+[Unit]
+Description=anki-cli (headless Anki server)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=anki
+Group=anki
+Environment=ANKICLI_BASE=/var/lib/anki-cli
+# Environment=ANKICLI_API_KEY=change-me
+ExecStart=/opt/anki-cli/.venv/bin/anki-cli serve --host 127.0.0.1 --port 8765
+Restart=on-failure
+RestartSec=2
+KillSignal=SIGTERM
+TimeoutStopSec=60
+StateDirectory=anki-cli
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/anki-cli
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

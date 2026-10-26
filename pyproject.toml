@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ankicli"
+dynamic = ["version"]
+description = "Anki's own engine as a fast headless server and command-line tool: a drop-in replacement for AnkiConnect (legacy and v1 APIs), without Anki Desktop."
+readme = "README.md"
+license = "AGPL-3.0-or-later"
+requires-python = ">=3.10"
+authors = [{ name = "Macro002" }]
+keywords = ["anki", "ankiconnect", "flashcards", "spaced-repetition", "headless", "cli"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Topic :: Education",
+]
+dependencies = ["anki>=25.9,<27"]
+
+[project.optional-dependencies]
+test = ["pytest>=8", "jsonschema>=4.20"]
+
+[project.urls]
+Homepage = "https://github.com/Macro002/anki-cli"
+Issues = "https://github.com/Macro002/anki-cli/issues"
+
+[project.scripts]
+anki-cli = "ankicli.cli:main"
+ankicli = "ankicli.cli:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "ankicli.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --ignore=tests/compat"
+filterwarnings = ["ignore::DeprecationWarning"]

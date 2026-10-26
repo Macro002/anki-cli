@@ -1,0 +1,14 @@
+services:
+  anki-cli:
+    build: .
+    image: anki-cli
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8765:8765"
+    environment:
+      ANKICLI_API_KEY: change-me     # required by clients as "key" (legacy) or "Authorization: Bearer" (v1)
+    volumes:
+      - anki-data:/data
+    stop_grace_period: 60s           # lets collections close cleanly
+volumes:
+  anki-data:
