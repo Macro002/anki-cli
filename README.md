@@ -1,12 +1,21 @@
-# anki-cli
+<p align="center">
+  <img src="docs/icon.png" alt="anki-cli" width="128" height="128">
+</p>
 
-**Anki's own engine as a fast, headless server and command-line tool.** A drop-in
-replacement for [AnkiConnect](https://ankiweb.net/shared/info/2055492159) that
-doesn't need Anki Desktop, a display, or a container running a GUI.
+<h1 align="center">anki-cli</h1>
 
-[![CI](https://github.com/Macro002/anki-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/Macro002/anki-cli/actions/workflows/ci.yml)
-![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![License](https://img.shields.io/badge/license-AGPL--3.0-green)
+<p align="center">
+  <b>Anki's own engine as a fast, headless server and command-line tool.</b><br>
+  A drop-in replacement for <a href="https://ankiweb.net/shared/info/2055492159">AnkiConnect</a> that doesn't need
+  Anki Desktop, a display, or a container running a GUI.
+</p>
+
+<p align="center">
+  <a href="https://github.com/Macro002/anki-cli/actions/workflows/ci.yml"><img src="https://github.com/Macro002/anki-cli/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="Python 3.10+">
+  <img src="https://img.shields.io/badge/license-AGPL--3.0-green" alt="AGPL-3.0">
+  <img src="https://img.shields.io/badge/AnkiConnect%20test%20suite-877%20passed-brightgreen" alt="AnkiConnect test suite: 877 passed">
+</p>
 
 ```bash
 pip install git+https://github.com/Macro002/anki-cli
@@ -203,6 +212,24 @@ pip install -e ".[test]"
 pytest                          # 63 tests, offline
 python tests/compat/run.py      # AnkiConnect's suite (fetches it at a pinned commit)
 ```
+
+## Compared with other tools
+
+| | anki-cli | [AnkiConnect](https://ankiweb.net/shared/info/2055492159) | [ubermenchh/anki-cli](https://github.com/ubermenchh/anki-cli) | [anki-connect-server](https://github.com/formeo14/anki-connect-server) |
+|---|---|---|---|---|
+| Engine | official `anki` package | Anki Desktop | own SQLite access + `fsrs` library, or AnkiConnect | official `anki` package |
+| Runs without Anki Desktop | yes | no | direct mode only | yes |
+| AnkiConnect legacy API | all 122 actions | — (reference) | client of it | subset |
+| AnkiConnect v1 API | all 95 methods | — (reference) | no | no |
+| Checked against AnkiConnect's test suite | yes, 877 passed | — | no | no |
+| AnkiWeb / self-hosted sync | yes, incl. full-sync choice | via GUI | no | yes |
+| Many collections per process | yes | no | no | no |
+| CLI | yes | no | yes (rich, with a TUI) | no |
+
+Because anki-cli runs Anki's own engine, scheduling (FSRS and SM-2, learning steps,
+daily limits, burying), template rendering and sync are Anki's — not a
+reimplementation that can drift from it. Tools that write the database with their own
+code have to keep up with every Anki release by hand.
 
 ## Differences from AnkiConnect
 
