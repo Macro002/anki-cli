@@ -1,0 +1,264 @@
+Screen {
+    background: $background;
+}
+
+/* -- splash ---------------------------------------------------------------------------------- */
+
+Splash {
+    align: center middle;
+}
+#splash-logo {
+    width: auto;
+}
+#splash-title {
+    width: auto;
+    margin-top: 1;
+    color: $foreground;
+}
+
+/* -- shared bars ----------------------------------------------------------------------------- */
+
+#topbar, #review-bar, #form-bar, #stats-bar {
+    height: 1;
+    background: $surface;
+    color: $foreground;
+}
+.section-title {
+    height: 1;
+    color: #8a93a6;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+/* -- decks ----------------------------------------------------------------------------------- */
+
+#home {
+    padding: 1 2;
+}
+#deck-column {
+    width: 1fr;
+    max-width: 90;
+}
+#decks {
+    height: 1fr;
+    background: $background;
+}
+#decks > .datatable--header {
+    background: $background;
+    color: #8a93a6;
+}
+#decks > .datatable--cursor {
+    background: $primary 25%;
+    text-style: bold;
+}
+#side {
+    width: 50;
+    margin-left: 3;
+}
+#side-logo {
+    height: auto;
+    margin-bottom: 1;
+}
+#deck-info {
+    height: auto;
+    padding: 1 2;
+    border: round #2b3446;
+}
+
+/* -- reviewer -------------------------------------------------------------------------------- */
+
+#card-scroll {
+    height: 1fr;
+    padding: 2 4;
+    align-horizontal: center;
+}
+#card {
+    width: 100%;
+    max-width: 100;
+    height: auto;
+    text-align: center;
+    margin-top: 2;
+}
+#card-meta {
+    height: 1;
+    text-align: center;
+}
+#answer-bar {
+    height: 5;
+    padding: 1 0;
+}
+#show {
+    min-width: 30;
+}
+#ratings {
+    height: 3;
+    width: auto;
+}
+.rating {
+    min-width: 16;
+    margin: 0 1;
+    background: $surface;
+    border: round #2b3446;
+}
+.rating:hover {
+    background: $panel;
+}
+.rating:focus {
+    text-style: bold;
+}
+.rating-again { color: #ff8d8d; }
+.rating-hard  { color: #b3a9ff; }
+.rating-good  { color: #56d364; }
+.rating-easy  { color: #79b8ff; }
+.rating-again:focus { border: round #e66767; }
+.rating-hard:focus  { border: tall #9085e9; }
+.rating-good:focus  { border: tall #3fb950; }
+.rating-easy:focus  { border: tall #5aa2ff; }
+
+/* -- browser --------------------------------------------------------------------------------- */
+
+#search {
+    margin: 1 2 0 2;
+    background: $surface;
+    padding: 0 1;
+}
+#browser {
+    height: 1fr;
+    padding: 1 2 0 2;
+}
+#cards {
+    width: 3fr;
+    height: 1fr;
+}
+#cards > .datatable--cursor {
+    background: $primary 25%;
+}
+#preview-pane {
+    width: 2fr;
+    min-width: 30;
+    margin-left: 2;
+    border: round #2b3446;
+    padding: 0 1;
+}
+#preview-scroll {
+    height: 1fr;
+}
+#preview-meta {
+    height: auto;
+    border-top: solid #2b3446;
+    padding-top: 0;
+}
+#browse-status {
+    height: 1;
+    margin: 0 2;
+}
+
+/* -- editor ---------------------------------------------------------------------------------- */
+
+#form {
+    padding: 1 2;
+    max-width: 110;
+}
+#form-pickers {
+    height: auto;
+    margin-bottom: 1;
+}
+#form-pickers Select {
+    width: 1fr;
+    margin-right: 2;
+}
+#fields {
+    height: auto;
+}
+.field-label {
+    color: #8a93a6;
+    margin-top: 1;
+}
+.field {
+    height: auto;
+    min-height: 3;
+    max-height: 12;
+    background: $surface;
+    padding: 0 1;
+}
+.field:focus {
+    background: $panel;
+}
+#tags {
+    background: $surface;
+}
+#form-status {
+    margin-top: 1;
+    height: auto;
+}
+
+/* -- stats ----------------------------------------------------------------------------------- */
+
+#stats {
+    padding: 1 2;
+}
+#stats-grid {
+    height: auto;
+}
+#stats-grid > .panel {
+    width: 1fr;
+}
+#stats-today {
+    margin-right: 2;
+}
+.panel {
+    height: auto;
+    padding: 1 2;
+    border: round #2b3446;
+    margin-bottom: 1;
+}
+
+/* -- dialogs --------------------------------------------------------------------------------- */
+
+ModalScreen {
+    align: center middle;
+    background: $background 60%;
+}
+.dialog {
+    width: 64;
+    height: auto;
+    max-height: 90%;
+    padding: 1 2;
+    background: $surface;
+    border: round $primary;
+}
+.dialog.wide {
+    width: 72;
+}
+.dialog-title {
+    text-style: bold;
+    margin-bottom: 1;
+    width: 100%;
+}
+.dialog-hint {
+    color: #4b5565;
+    margin-top: 1;
+}
+.dialog-buttons {
+    height: auto;
+    align-horizontal: right;
+    margin-top: 1;
+}
+.dialog-buttons Button {
+    margin-left: 1;
+}
+.dialog Input {
+    margin-bottom: 1;
+}
+#profiles {
+    height: auto;
+    max-height: 14;
+    background: $background;
+}
+#sync-login {
+    height: auto;
+}
+#sync-status {
+    height: auto;
+    margin-bottom: 1;
+}

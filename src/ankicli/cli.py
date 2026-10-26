@@ -268,6 +268,17 @@ def cmd_study(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_tui(args: argparse.Namespace) -> int:
+    try:
+        from .tui.app import run
+    except ImportError:
+        print("The terminal app needs Textual: pip install 'ankicli[tui]'", file=sys.stderr)
+        return 1
+    client = connect(args)
+    run(client, remote=not hasattr(client, "app"), splash=not args.no_splash)
+    return 0
+
+
 def cmd_import(args: argparse.Namespace) -> int:
     client = connect(args)
     path = os.path.abspath(args.file)
@@ -479,6 +490,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = add("study", cmd_study, "Study in the terminal with Anki's scheduler.")
     p.add_argument("deck", nargs="?")
+
+    p = add("tui", cmd_tui, "The full-screen terminal app: decks, reviewer, browser, editor, stats, sync.")
+    p.add_argument("--no-splash", action="store_true", help="skip the logo at startup")
 
     p = add("import", cmd_import, "Import .apkg, .colpkg, .csv/.tsv/.txt.")
     p.add_argument("file")

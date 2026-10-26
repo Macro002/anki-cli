@@ -62,6 +62,9 @@ directly:
 * **A CLI** for humans and scripts: `decks`, `add`, `find`, `show`, `study` (in the
   terminal, with Anki's scheduler), `import`, `export`, `sync`, `backup`, `stats`,
   `check`, `profiles`, and `call` for any API method.
+* **A full-screen terminal app** (`anki-cli tui`): deck tree, reviewer with audio,
+  browser, note editor, statistics, sync and profiles. Works locally or against a server,
+  including over SSH.
 * **A Python client** (`ankicli.client.Client`) with keep-alive connections.
 
 ## Install
@@ -127,6 +130,41 @@ note = anki.call("notes.create", noteType={"name": "Basic"}, deck={"name": "Fren
 state = anki.call("reviewer.start", deck={"name": "French"})
 anki.legacy("findCards", query="deck:French")
 ```
+
+## Terminal app
+
+```bash
+pip install "ankicli[tui] @ git+https://github.com/Macro002/anki-cli"
+anki-cli tui                       # opens the collection, or connects to a running server
+anki-cli tui --url http://server:8765 --key …
+```
+
+<p align="center">
+  <img src="docs/tui/decks.webp" alt="Deck list" width="49%">
+  <img src="docs/tui/review.webp" alt="Reviewer" width="49%">
+  <img src="docs/tui/browse.webp" alt="Browser" width="49%">
+  <img src="docs/tui/stats.webp" alt="Statistics" width="49%">
+</p>
+
+* **Decks**: the tree with Anki's new / learning / due counts (daily limits applied);
+  create, rename and delete decks.
+* **Reviewer**: Anki's scheduler and its real interval labels. Press <kbd>space</kbd> to
+  show the answer, <kbd>1</kbd>–<kbd>4</kbd> to rate, and <kbd>u</kbd> to undo. You can
+  also edit, flag, suspend and bury from here. Card audio plays through `mpv`, `ffplay`,
+  `afplay` or `paplay`.
+* **Browser**: Anki search syntax, a sortable card table with flag and suspended colors,
+  and a live preview. Suspend, flag, move, edit or delete without leaving it.
+* **Editor**: adding uses a form for the note type with live duplicate warnings, and
+  sticky fields are kept between notes.
+* **Statistics**: today's numbers, card states, a year of reviews as a heatmap, and the
+  due forecast, for one deck or the whole collection.
+* **Sync and profiles**: log in to AnkiWeb or a self-hosted server and sync. When a full
+  sync is needed you choose the side explicitly. You can also switch, create, rename and
+  delete profiles.
+
+Press <kbd>?</kbd> anywhere for every key. Cards are shown as text: formatting, cloze,
+furigana (`猫(ねこ)`) and `[image: …]` placeholders. Styling from the deck's CSS is
+not applied.
 
 ## Collections and profiles
 
@@ -228,6 +266,7 @@ python tests/compat/run.py      # AnkiConnect's suite (fetches it at a pinned co
 | AnkiWeb / self-hosted sync | yes, incl. full-sync choice | via GUI | no | yes |
 | Many collections per process | yes | no | no | no |
 | CLI | yes | no | yes (rich, with a TUI) | server and media tools |
+| Terminal app (TUI) | yes: reviewer, browser, editor, stats, sync | no | yes | no |
 
 Because anki-cli runs Anki's own engine, scheduling (FSRS and SM-2, learning steps,
 daily limits, burying), template rendering and sync are Anki's — not a

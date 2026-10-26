@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+* `anki-cli tui`: a full-screen terminal app (optional extra `ankicli[tui]`, built on
+  Textual). It has a deck tree, a reviewer with audio and undo, a browser with preview,
+  an add/edit note form, statistics with a review heatmap and due forecast, sync with
+  login and the full-sync choice, and profiles. It works on a local collection or against
+  a server.
+* The CLI no longer crashes on consoles with a legacy code page (Windows cp1252).
+
 ## 0.1.0 — 2026-10-26
 
 First release.
