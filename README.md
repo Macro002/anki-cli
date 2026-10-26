@@ -219,12 +219,12 @@ python tests/compat/run.py      # AnkiConnect's suite (fetches it at a pinned co
 |---|---|---|---|---|
 | Engine | official `anki` package | Anki Desktop | own SQLite access + `fsrs` library, or AnkiConnect | official `anki` package |
 | Runs without Anki Desktop | yes | no | direct mode only | yes |
-| AnkiConnect legacy API | all 122 actions | — (reference) | client of it | subset |
+| AnkiConnect legacy API | all 122 actions | — (reference) | client of it | 49 actions documented |
 | AnkiConnect v1 API | all 95 methods | — (reference) | no | no |
 | Checked against AnkiConnect's test suite | yes, 877 passed | — | no | no |
 | AnkiWeb / self-hosted sync | yes, incl. full-sync choice | via GUI | no | yes |
 | Many collections per process | yes | no | no | no |
-| CLI | yes | no | yes (rich, with a TUI) | no |
+| CLI | yes | no | yes (rich, with a TUI) | server and media tools |
 
 Because anki-cli runs Anki's own engine, scheduling (FSRS and SM-2, learning steps,
 daily limits, burying), template rendering and sync are Anki's — not a
