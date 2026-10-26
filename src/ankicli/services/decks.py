@@ -95,10 +95,9 @@ class Decks(Base):
     def decks_getCounts(self, deck: dict, includeChildren: bool = True) -> dict:
         value = self.resolve(deck, "deck")
         node = self._tree_node(value["id"])
-        if node is None:
-            raise ApiError("notFound", "Deck counts are unavailable.")
-        counts = [node.new_count, node.learn_count, node.review_count]
-        if not includeChildren:
+        # Anki leaves an empty Default deck out of the tree: it exists, nothing is due.
+        counts = [node.new_count, node.learn_count, node.review_count] if node else [0, 0, 0]
+        if node and not includeChildren:
             for child in node.children:
                 counts = [max(0, a - b) for a, b in zip(counts, [child.new_count, child.learn_count,
                                                                     child.review_count])]

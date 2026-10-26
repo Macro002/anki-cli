@@ -27,6 +27,14 @@ def test_deck_stats(client, basic):
     assert "Created By Stats" in client.legacy("deckNames")
 
 
+def test_deck_stats_for_the_hidden_empty_default_deck(client, basic):
+    # Anki hides an empty Default deck from its due tree; it still has (zero) counts.
+    stats = client.legacy("getDeckStats", decks=["Default", "Test"])
+    assert stats["1"]["new_count"] == 0 and stats["1"]["total_in_deck"] == 0
+    assert any(entry["name"] == "Test" and entry["new_count"] == 3 for entry in stats.values())
+    assert client.rpc("decks.getCounts", deck={"name": "Default"})["new"] == 0
+
+
 def test_deck_config(client):
     config = client.legacy("getDeckConfig", deck="Default")
     assert config["id"] == 1 and config["new"]["perDay"] == 20
