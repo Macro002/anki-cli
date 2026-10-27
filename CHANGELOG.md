@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+* Anki's own pages: `serve` now serves the Statistics screen, Deck Options (with FSRS
+  optimize/simulate), Card Info and Congrats exactly as Anki Desktop shows them, under
+  `[/profiles/<name>]/pages/`. The pages are taken from the `aqt` wheel matching the
+  installed `anki` (downloaded once and checksum-verified, or `anki-cli pages install
+  --wheel …` offline); no Qt needed.
 * `anki-cli tui`: a full-screen terminal app (optional extra `ankicli[tui]`, built on
   Textual). It has a deck tree, a reviewer with audio and undo, a browser with preview,
   an add/edit note form, statistics with a review heatmap and due forecast, sync with

@@ -410,6 +410,19 @@ def cmd_profiles(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_pages(args: argparse.Namespace) -> int:
+    from . import pages
+    if args.action == "install":
+        path = pages.install(args.wheel)
+        emit({"installed": True, "path": str(path)}, args, lambda _: print(f"Anki's pages installed in {path}"))
+        return 0
+    ready = pages.installed()
+    emit({"installed": ready, "path": str(pages.cache_dir()), "routes": list(pages.ROUTES)}, args,
+         lambda _: print(f"Anki's pages {'are' if ready else 'are not yet'} installed in {pages.cache_dir()}"
+                         + ("" if ready else " (downloaded on first use; or run `anki-cli pages install`)")))
+    return 0
+
+
 def cmd_info(args: argparse.Namespace) -> int:
     client = connect(args)
     emit(client.call("collection.info"), args)
@@ -525,6 +538,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("new_name", nargs="?")
     p.add_argument("--yes", action="store_true")
     add("info", cmd_info, "Collection paths and counts.")
+    p = add("pages", cmd_pages, "Anki's Statistics/Deck Options pages for `serve` (status or install).")
+    p.add_argument("action", nargs="?", choices=["status", "install"], default="status")
+    p.add_argument("--wheel", help="install from a downloaded aqt wheel instead of PyPI")
     return parser
 
 

@@ -6,6 +6,8 @@ than the active one, which lets one server host many collections at once):
     POST /            legacy Anki-Connect actions (GET with a JSON body also works)
     POST /api/v1      JSON-RPC 2.0
     GET  /media/<f>   a media file of the collection (Range requests supported)
+    GET  /pages/<p>   Anki's own pages: graphs, deck-options/<deck id>, card-info/<card id>,
+                      congrats (see pages.py); they call back with POST /pages/_anki/<method>
     GET  /health      liveness probe
 """
 from __future__ import annotations
@@ -23,7 +25,7 @@ import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
-from . import __version__
+from . import __version__, pages
 from .app import App
 from .errors import ApiError
 from .legacy import API_VERSION, Legacy
@@ -37,6 +39,9 @@ MAX_RPC_BYTES = 16 * 1024 * 1024
 LOCAL_PREFIXES = ("http://127.0.0.1:", "https://127.0.0.1:", "chrome-extension://", "moz-extension://",
                   "safari-web-extension://")
 PROFILE_PATH = re.compile(r"^/profiles/([^/]+)(/.*)?$")
+SAFE_PREFIX = re.compile(r"^(/[A-Za-z0-9._~%-]+)*$")
+PAGE_COOKIE = "ankicli_pages"
+MAX_PAGE_CALL_BYTES = 16 * 1024 * 1024
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -147,6 +152,8 @@ class Handler(BaseHTTPRequestHandler):
             self.send_body(200, dumps({"status": "ok", "version": __version__}))
         elif path.startswith("/media/"):
             self.serve_media(profile, urllib.parse.unquote(path[len("/media/"):]), query)
+        elif path.startswith("/pages/"):
+            self.serve_page(profile, path[len("/pages/"):], query)
         elif path == "/":
             self.legacy(profile)
         elif path == "/api/v1":
@@ -160,6 +167,8 @@ class Handler(BaseHTTPRequestHandler):
             self.legacy(profile)
         elif path == "/api/v1":
             self.rpc(profile)
+        elif path.startswith("/pages/_anki/"):
+            self.page_call(profile, path[len("/pages/_anki/"):])
         else:
             self.send_body(404)
 
@@ -224,6 +233,79 @@ class Handler(BaseHTTPRequestHandler):
             self.send_body(204)
         else:
             self.send_body(200, dumps(response))
+
+    # -- Anki's pages ------------------------------------------------------------------------
+
+    def page_prefix(self) -> str:
+        """The public URL prefix of ``pages/`` (a reverse proxy may announce its own)."""
+        forwarded = self.headers.get("X-Forwarded-Prefix", "").rstrip("/")
+        if forwarded and SAFE_PREFIX.match(forwarded):
+            return forwarded
+        match = PROFILE_PATH.match(urllib.parse.urlsplit(self.path).path)
+        return (f"/profiles/{match.group(1)}" if match else "") + "/pages"
+
+    def page_cookie_ok(self) -> bool:
+        key = self.server.app.api_key
+        if key is None:
+            return True
+        for part in self.headers.get("Cookie", "").split(";"):
+            name, _, value = part.strip().partition("=")
+            if name == PAGE_COOKIE and hmac.compare_digest(value.encode(), key.encode()):
+                return True
+        return False
+
+    def serve_page(self, profile: str | None, path: str, query: dict) -> None:
+        """A page opened directly may carry ``?key=``; it's swapped for a cookie so the page's
+        own requests are authorized too. ``graphs?deck=<id>`` opens the stats of that deck."""
+        extra: dict = {}
+        if not (self.bearer_ok() or self.page_cookie_ok()):
+            if not self.bearer_ok(query):
+                self.send_body(401, b"Unauthorized: send the API key (Authorization: Bearer, or ?key=).",
+                               "text/plain")
+                return
+            extra["Set-Cookie"] = f"{PAGE_COOKIE}={query['key']}; Path=/; HttpOnly; SameSite=Strict"
+        try:
+            if query.get("deck") and path.split("/", 1)[0] == "graphs":
+                pages.select_deck(self.server.app.profiles.host(profile), query["deck"])
+            found = pages.file(urllib.parse.unquote(path), self.page_prefix())
+        except ApiError as error:
+            status = {"invalidParams": 400, "notFound": 404}.get(error.kind, 503)
+            self.send_body(status, str(error).encode(), "text/plain")
+            return
+        if found is None:
+            self.send_body(404)
+            return
+        body, content_type, immutable = found
+        extra["Cache-Control"] = "public, max-age=31536000, immutable" if immutable else "no-cache"
+        self.send_body(200, body, content_type, extra)
+
+    def page_call(self, profile: str | None, method: str) -> None:
+        # Like Anki Desktop: a binary content type can't be sent by a plain cross-site form.
+        if self.headers.get("Content-Type") != "application/binary":
+            self.send_body(403)
+            return
+        if not self.bearer_ok():
+            origin = self.headers.get("Origin")
+            same_origin = not origin or urllib.parse.urlsplit(origin).netloc == self.headers.get("Host")
+            if not (self.page_cookie_ok() and same_origin):
+                self.send_body(401)
+                return
+        body = self.read_body(MAX_PAGE_CALL_BYTES)
+        if body is None:
+            return
+        try:
+            host = self.server.app.profiles.host(profile)
+            output = pages.call(host, method, body)
+        except ApiError as error:
+            self.send_body(404 if error.kind == "methodNotFound" else 500, str(error).encode(), "text/plain")
+            return
+        except Exception as error:  # noqa: BLE001 - the backend's message is what the page shows
+            self.send_body(500, str(error).encode(), "text/plain")
+            return
+        if output:
+            self.send_body(200, output, "application/binary")
+        else:
+            self.send_body(204)
 
     def serve_media(self, profile: str | None, name: str, query: dict) -> None:
         if not self.bearer_ok(query):

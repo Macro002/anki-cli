@@ -182,6 +182,30 @@ anki-cli keeps profiles in a folder laid out like Anki Desktop's
   its own worker thread, so collections are served in parallel. AnkiConnect's
   `getProfiles`/`loadProfile` and v1 `profiles.*` work on the active profile as usual.
 
+## Anki's own pages
+
+`anki-cli serve` also serves the screens Anki Desktop builds as web pages, so web apps
+can show them unchanged: the **Statistics** screen, **Deck Options** (presets, every
+option, FSRS optimize and simulate), **Card Info** and the congrats screen.
+
+```
+GET [/profiles/<name>]/pages/graphs[?deck=<deck id>]
+GET [/profiles/<name>]/pages/deck-options/<deck id>
+GET [/profiles/<name>]/pages/card-info/<card id>
+GET [/profiles/<name>]/pages/congrats
+```
+
+Open one in a browser with `?key=<API key>` (it's exchanged for a cookie), or proxy it
+with `Authorization: Bearer …` and announce the public path with `X-Forwarded-Prefix`.
+Add `?theme=dark` or `#night` for dark mode (otherwise the system setting). Embedded in
+an iframe, a page reports `deckOptionsSaved` and `deckOptionsClose` to its parent with
+`postMessage`.
+
+The pages ship in Anki's GUI package (`aqt`), which needs Qt. anki-cli instead downloads
+the `aqt` wheel matching your `anki` version from PyPI once, verifies its checksum and
+keeps only the web files (about 5 MB, in `~/.cache/anki-cli/pages/`). Offline:
+`anki-cli pages install --wheel aqt-<version>-py3-none-any.whl`.
+
 ## Sync
 
 ```bash
