@@ -36,6 +36,7 @@ def wheel(tmp_path, monkeypatch):
         archive.writestr(PREFIX + "_app/immutable/entry/start.abc.mjs", 'import "../chunks/api.mjs";')
         archive.writestr(PREFIX + "_app/immutable/chunks/api.mjs",
                          "async function d(n){const l=`/_anki/${n}`;return fetch(l)}")
+        archive.writestr(PREFIX + "_app/immutable/nodes/9.mjs", 'bi(t,{initialSearch:"deck:current",initialDays:365})')
         archive.writestr(PREFIX + "_app/version.json", '{"version":"1"}')
         archive.writestr("aqt/__init__.py", "")
     pages.install(path)
@@ -113,6 +114,10 @@ def test_assets(keyed):
     assert "immutable" in headers["Cache-Control"]
     status, body, _ = client.raw("/profiles/p/pages/_app/immutable/chunks/api.mjs", None, method="GET", headers=auth)
     assert body == b"async function d(n){const l=`/profiles/p/pages/_anki/${n}`;return fetch(l)}"
+    status, body, headers = client.raw("/pages/_app/immutable/nodes/9.mjs", None, method="GET", headers=auth)
+    assert body == (b'bi(t,{initialSearch:(new URLSearchParams(location.search).get("search")??"deck:current"),'
+                    b'initialDays:365})')
+    assert headers["Cache-Control"] == "no-cache"
     status, body, _ = client.raw("/pages/_ankicli/bridge.js", None, method="GET", headers=auth)
     assert b"bridgeCommand" in body and b"deckOptionsSaved" in body
     for path in ("/pages/_app/../../../etc/passwd", "/pages/_app/%2e%2e/%2e%2e/index.html", "/pages/other",

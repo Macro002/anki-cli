@@ -189,7 +189,7 @@ can show them unchanged: the **Statistics** screen, **Deck Options** (presets, e
 option, FSRS optimize and simulate), **Card Info** and the congrats screen.
 
 ```
-GET [/profiles/<name>]/pages/graphs[?deck=<deck id>]
+GET [/profiles/<name>]/pages/graphs[?deck=<deck id> | ?search=<search>]
 GET [/profiles/<name>]/pages/deck-options/<deck id>
 GET [/profiles/<name>]/pages/card-info/<card id>
 GET [/profiles/<name>]/pages/congrats
@@ -197,7 +197,9 @@ GET [/profiles/<name>]/pages/congrats
 
 Open one in a browser with `?key=<API key>` (it's exchanged for a cookie), or proxy it
 with `Authorization: Bearer …` and announce the public path with `X-Forwarded-Prefix`.
-Add `?theme=dark` or `#night` for dark mode (otherwise the system setting). Embedded in
+The Statistics screen starts on `deck:current` like in Anki Desktop; `?deck=` selects that
+deck first, `?search=` starts on any search (empty for the whole collection). Add
+`?theme=dark` or `#night` for dark mode (otherwise the system setting). Embedded in
 an iframe, a page reports `deckOptionsSaved` and `deckOptionsClose` to its parent with
 `postMessage`.
 

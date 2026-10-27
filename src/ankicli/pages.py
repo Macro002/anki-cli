@@ -55,6 +55,11 @@ UNQUEUED_METHODS = {"latest_progress", "set_wants_abort"}
 # Desktop window plumbing: acknowledged, and reported to an embedding page by the bridge.
 WINDOW_METHODS = {"deck_options_ready", "deck_options_require_close"}
 
+# graphs?search=… opens the Statistics screen on that search ("" is the whole collection);
+# without it, the page starts on deck:current as in Anki Desktop.
+INITIAL_SEARCH = b'initialSearch:"deck:current"'
+SEARCH_FROM_URL = b'initialSearch:(new URLSearchParams(location.search).get("search")??"deck:current")'
+
 _lock = threading.Lock()
 _CSP_META = re.compile(rb'<meta http-equiv="content-security-policy" content="[^"]*">')
 _INLINE_SCRIPT = re.compile(rb"<script>(.*?)</script>", re.S)
@@ -257,10 +262,12 @@ def file(path: str, prefix: str) -> tuple[bytes, str, bool] | None:
                     ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png",
                     ".woff2": "font/woff2", ".ttf": "font/ttf"}.get(full.suffix, "application/octet-stream")
     body = full.read_bytes()
-    if full.suffix == ".mjs" and b"`/_anki/" in body:
+    if full.suffix == ".mjs" and (b"`/_anki/" in body or INITIAL_SEARCH in body):
         key = (prefix, path)
-        body = _rewritten.get(key) or _remember(key, body.replace(b"`/_anki/", f"`{prefix}/_anki/".encode()))
-        return body, content_type, False
+        changed = _rewritten.get(key) or _remember(key, body.replace(b"`/_anki/", f"`{prefix}/_anki/".encode())
+                                                       .replace(INITIAL_SEARCH, SEARCH_FROM_URL))
+        # Served fresh: the same file name holds different content than Anki's original.
+        return changed, content_type, False
     return body, content_type, "/immutable/" in path
 
 
