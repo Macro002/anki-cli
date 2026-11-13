@@ -35,6 +35,26 @@ def test_deck_stats_for_the_hidden_empty_default_deck(client, basic):
     assert client.rpc("decks.getCounts", deck={"name": "Default"})["new"] == 0
 
 
+def test_deck_stats_match_per_deck_counts(client):
+    # getDeckStats counts every deck in one pass; it must agree with decks.getCounts deck by deck,
+    # with subdecks, studied cards and a filtered deck (whose cards also count for their home deck).
+    names = ["A", "A::B", "A::B::C", "E"]
+    for name in names:
+        client.legacy("createDeck", deck=name)
+    client.legacy("addNotes", notes=[{"deckName": names[i % 4], "modelName": "Basic",
+                                      "fields": {"Front": f"q{i}", "Back": "a"}} for i in range(40)])
+    cards = client.legacy("findCards", query="deck:A")
+    client.legacy("answerCards", answers=[{"cardId": card, "ease": 3} for card in cards[:6]])
+    client.legacy("setDueDate", cards=cards[6:9], days="0")
+    client.rpc("filteredDecks.create", name="E::Filtered", search="deck:A::B", limit=5)
+    stats = client.legacy("getDeckStats", decks=list(client.legacy("deckNamesAndIds")))
+    assert len(stats) == 6
+    for entry in stats.values():
+        counts = client.rpc("decks.getCounts", deck={"name": entry["name"]})
+        assert (entry["new_count"], entry["learn_count"], entry["review_count"], entry["total_in_deck"]) == \
+            (counts["new"], counts["learning"], counts["review"], counts["total"]), entry["name"]
+
+
 def test_deck_config(client):
     config = client.legacy("getDeckConfig", deck="Default")
     assert config["id"] == 1 and config["new"]["perDay"] == 20

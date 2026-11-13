@@ -1018,13 +1018,14 @@ class Legacy:
         return True
 
     def a_getDeckStats(self, s: Services, p: dict) -> dict:
+        # Create any missing decks first (AnkiConnect does), then count them all in one pass.
+        decks = [(name, int(s.decks_create(name)["id"])) for name in p["decks"]]
+        counts = s._counts_for([did for _, did in decks])
         out = {}
-        for name in p["decks"]:
-            deck = s.decks_create(name)
-            counts = s.decks_getCounts({"id": deck["id"]})
-            out[deck["id"]] = {"deck_id": int(deck["id"]), "name": name, "new_count": counts["new"],
-                               "learn_count": counts["learning"], "review_count": counts["review"],
-                               "total_in_deck": counts["total"]}
+        for name, did in decks:
+            c = counts[did]
+            out[did] = {"deck_id": did, "name": name, "new_count": c["new"], "learn_count": c["learning"],
+                        "review_count": c["review"], "total_in_deck": c["total"]}
         return out
 
     def a_deckNameFromId(self, s: Services, p: dict) -> str:

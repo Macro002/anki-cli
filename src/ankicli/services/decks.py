@@ -108,6 +108,36 @@ class Decks(Base):
         return {"deckId": str(value["id"]), "new": counts[0], "learning": counts[1], "review": counts[2],
                 "total": total}
 
+    def _counts_for(self, deck_ids: list[int]) -> dict[int, dict]:
+        """decks_getCounts for many decks at once: one due tree and one card count for all of
+        them, instead of one each (which grew with decks x cards and timed out big collections)."""
+        nodes: dict[int, Any] = {}
+        stack = [self.col.sched.deck_due_tree()]
+        while stack:
+            entry = stack.pop()
+            nodes[entry.deck_id] = entry
+            stack.extend(entry.children)
+        # Each deck with its parents, so a card counts toward every deck above it (once).
+        by_name = {d.name: d.id for d in self.col.decks.all_names_and_ids()}
+        lineage: dict[int, set[int]] = {}
+        for name, did in by_name.items():
+            parts = name.split("::")
+            lineage[did] = {by_name[p] for p in ("::".join(parts[:i]) for i in range(1, len(parts) + 1))
+                            if p in by_name}
+        wanted = set(deck_ids)
+        totals = dict.fromkeys(wanted, 0)
+        for did, odid, count in self.col.db.all("select did, odid, count() from cards group by did, odid"):
+            for target in (lineage.get(did, set()) | lineage.get(odid, set())) & wanted:
+                totals[target] += count
+        out = {}
+        for did in deck_ids:
+            node = nodes.get(did)
+            # Anki leaves an empty Default deck out of the tree: it exists, nothing is due.
+            out[did] = {"deckId": str(did), "new": node.new_count if node else 0,
+                        "learning": node.learn_count if node else 0,
+                        "review": node.review_count if node else 0, "total": totals[did]}
+        return out
+
     def decks_tree(self, deck: dict | None = None) -> dict:
         """The whole deck tree with Anki's due counts (daily limits applied) in one call."""
         root = self.col.sched.deck_due_tree()
