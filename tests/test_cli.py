@@ -13,7 +13,7 @@ def run(*args, base=None, url=None, input_text=None, env=None):
     if url:
         command += ["--url", url]
     result = subprocess.run(command + list(args), capture_output=True, text=True, input=input_text,
-                            env={**os.environ, "ANKICLI_URL": "http://127.0.0.1:1", **(env or {})}, timeout=120)
+                            env={**{k: v for k, v in os.environ.items() if k != "ANKICLI_URL"}, **(env or {})}, timeout=120)
     return result
 
 
@@ -54,16 +54,35 @@ def test_direct_mode_commands(tmp_path):
     assert error.returncode == 2 and "not found" in error.stderr.lower()
 
 
-def test_remote_mode_and_server_autodetect(tmp_path):
+def test_remote_mode_and_ankicli_url(tmp_path):
     base, port = tmp_path / "base", free_port()
     process = start_server(base, port)
     url = f"http://127.0.0.1:{port}"
     try:
         assert run("add", "Front=remote", url=url).returncode == 0
         assert json.loads(run("find", "remote", "--json", url=url).stdout)
-        # Without --url, the CLI finds the running server instead of failing on the locked collection.
-        auto = run("find", "remote", "--json", env={"ANKICLI_URL": url})
-        assert auto.returncode == 0 and json.loads(auto.stdout)
+        named = run("find", "remote", "--json", env={"ANKICLI_URL": url})
+        assert named.returncode == 0 and json.loads(named.stdout)
+        # --base wins over $ANKICLI_URL: the collection is opened, not the server.
+        other = run("find", "remote", "--json", base=tmp_path / "other", env={"ANKICLI_URL": url})
+        assert other.returncode == 0 and json.loads(other.stdout) == []
     finally:
         process.terminate()
         process.wait(30)
+
+
+def test_no_server_is_probed_without_a_url(tmp_path, monkeypatch):
+    from ankicli import cli, client
+
+    def no_server(*args, **kwargs):
+        raise AssertionError("the CLI contacted a server it wasn't given")
+
+    monkeypatch.delenv("ANKICLI_URL", raising=False)
+    monkeypatch.setenv("ANKICLI_BASE", str(tmp_path / "base"))
+    monkeypatch.setattr(client.Client, "__init__", no_server)
+    args = cli.build_parser().parse_args(["decks"])
+    local = cli.connect(args)
+    try:
+        assert isinstance(local, client.LocalClient)
+    finally:
+        local.close()
