@@ -116,8 +116,9 @@ anki-cli call notes.search query="tag:verb" limit=20
 anki-cli call guiDeckReview name=French --legacy
 ```
 
-When a server is running, the CLI talks to it automatically; otherwise it opens the
-collection directly (`--url` and `--base` choose explicitly).
+The CLI opens the collection directly, or talks to the server named by `--url` (or
+`$ANKICLI_URL`). It never looks for a server on its own: while `serve` holds the
+collection, point the CLI at it with `ANKICLI_URL=http://127.0.0.1:8765`.
 
 Python:
 
@@ -135,7 +136,7 @@ anki.legacy("findCards", query="deck:French")
 
 ```bash
 pip install "ankicli[tui] @ git+https://github.com/Macro002/anki-cli"
-anki-cli tui                       # opens the collection, or connects to a running server
+anki-cli tui                       # opens the collection (or the server in $ANKICLI_URL)
 anki-cli tui --url http://server:8765 --key …
 ```
 

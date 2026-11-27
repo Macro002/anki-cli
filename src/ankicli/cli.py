@@ -13,7 +13,6 @@ from typing import Any
 from . import __version__
 from .errors import ApiError
 
-DEFAULT_URL = "http://127.0.0.1:8765"
 _OPENED: list = []  # in-process clients to close on exit
 
 
@@ -71,20 +70,15 @@ def key_values(items: list[str]) -> dict:
 # -- connection ----------------------------------------------------------------------------------
 
 def connect(args: argparse.Namespace):
+    """A server only when one is named (``--url`` or ``$ANKICLI_URL``), else the collection itself.
+
+    No port is probed: 8765 is also Anki Desktop's AnkiConnect, and a server found there may hold
+    another collection than the one ``--base`` or ``$ANKICLI_BASE`` selects.
+    """
     from .client import Client, LocalClient
-    if args.url:
-        return Client(args.url, key=args.key, profile=args.profile)
-    if not (args.base or args.collection):
-        remote = Client(os.environ.get("ANKICLI_URL", DEFAULT_URL), key=args.key, profile=args.profile, timeout=3)
-        try:
-            if remote.health():
-                info = remote.call("server.info")
-                if info.get("name") == "anki-cli":
-                    remote.timeout = 300
-                    remote.close()
-                    return remote
-        except Exception:  # noqa: BLE001 - fall back to direct access
-            pass
+    url = args.url or (None if args.base or args.collection else os.environ.get("ANKICLI_URL"))
+    if url:
+        return Client(url, key=args.key, profile=args.profile)
     client = LocalClient(args.base, args.collection, args.profile)
     _OPENED.append(client)
     return client
@@ -447,7 +441,7 @@ def build_parser() -> argparse.ArgumentParser:
         group.add_argument("--collection", default=default,
                            help="a single collection.anki2 file instead of a profiles folder")
         group.add_argument("--profile", default=default, help="profile to use (default: the active profile)")
-        group.add_argument("--url", default=default, help="talk to a running server instead of opening the collection")
+        group.add_argument("--url", default=default, help="talk to this server instead of opening the collection (default: $ANKICLI_URL)")
         group.add_argument("--key", default=default, help="API key of the server")
         target.add_argument("--json", action="store_true", default=argparse.SUPPRESS if suppress else False,
                             help="print raw JSON")
