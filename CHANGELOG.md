@@ -13,6 +13,8 @@
   login and the full-sync choice, and profiles. It works on a local collection or against
   a server.
 * The CLI no longer crashes on consoles with a legacy code page (Windows cp1252).
+* The legacy `sync` action now fails when media sync fails or doesn't finish in time,
+  like AnkiConnect, instead of returning success with media left unsynced.
 
 ## 0.1.0 — 2026-10-26
 

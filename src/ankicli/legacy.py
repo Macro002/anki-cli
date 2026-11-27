@@ -1306,6 +1306,11 @@ class Legacy:
         result = s.sync_run("auto")
         if result.get("fullSync") == "either":
             raise ApiError("invalidState", "A full sync is required; choose upload or download with sync.run.")
+        # Anki-Connect's sync fails when media sync fails; don't report success with media left behind.
+        if result.get("mediaError"):
+            raise ApiError("ioError", "Media sync failed: " + result["mediaError"])
+        if not result["mediaComplete"]:
+            raise ApiError("ioError", "Media sync did not finish in time.")
 
     # -- GUI ---------------------------------------------------------------------------------------
 
