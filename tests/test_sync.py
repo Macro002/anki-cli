@@ -86,3 +86,24 @@ def test_full_and_incremental_sync_between_two_profiles(client, sync_server):
     assert client.legacy("sync") is None
     client.rpc("sync.logout")
     assert client.legacy_error("sync") == "sync: auth not configured"
+
+
+@pytest.mark.parametrize(("media", "error"), [
+    ({"mediaComplete": False, "mediaError": "network down"}, "Media sync failed: network down"),
+    ({"mediaComplete": False}, "Media sync did not finish in time."),
+])
+def test_legacy_sync_fails_when_media_sync_fails(client, monkeypatch, media, error):
+    from ankicli.services.sync import Sync
+
+    result = {"outcome": "synced", "fullSync": None, "serverMessage": "", "collectionComplete": True, **media}
+    monkeypatch.setattr(Sync, "sync_run", lambda self, mode="auto", includeMedia=None: result)
+    assert client.legacy_error("sync") == error
+
+
+def test_legacy_sync_succeeds_without_media(client, monkeypatch):
+    from ankicli.services.sync import Sync
+
+    result = {"outcome": "synced", "fullSync": None, "serverMessage": "", "collectionComplete": True,
+              "mediaComplete": True}
+    monkeypatch.setattr(Sync, "sync_run", lambda self, mode="auto", includeMedia=None: result)
+    assert client.legacy("sync") is None
