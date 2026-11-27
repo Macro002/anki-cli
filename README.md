@@ -84,6 +84,9 @@ docker run -d -p 127.0.0.1:8765:8765 -v anki-data:/data -e ANKICLI_API_KEY=chang
 
 or `docker compose up -d` with the included [docker-compose.yml](docker-compose.yml).
 A hardened systemd unit is in [contrib/anki-cli.service](contrib/anki-cli.service).
+`serve` also accepts a socket from systemd socket activation; with `--idle-exit 300`
+(or `ANKICLI_IDLE_EXIT`) it exits after five minutes without a request and systemd starts
+it again on the next connection: see [contrib/anki-cli.socket](contrib/anki-cli.socket).
 
 ## Quick start
 

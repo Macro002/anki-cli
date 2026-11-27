@@ -13,6 +13,8 @@
   login and the full-sync choice, and profiles. It works on a local collection or against
   a server.
 * The CLI no longer crashes on consoles with a legacy code page (Windows cp1252).
+* `serve` accepts a listening socket from systemd socket activation, and `--idle-exit
+  SECONDS` (`ANKICLI_IDLE_EXIT`) exits after that long without a request, never during one.
 
 ## 0.1.0 — 2026-10-26
 
