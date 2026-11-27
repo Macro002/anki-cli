@@ -9,6 +9,10 @@ than the active one, which lets one server host many collections at once):
     GET  /pages/<p>   Anki's own pages: graphs, deck-options/<deck id>, card-info/<card id>,
                       congrats (see pages.py); they call back with POST /pages/_anki/<method>
     GET  /health      liveness probe
+
+``serve`` accepts a listening socket from systemd socket activation, and with
+``idle_exit`` it exits once no request has run for that many seconds; systemd
+starts it again on the next connection.
 """
 from __future__ import annotations
 
@@ -58,6 +62,21 @@ class Handler(BaseHTTPRequestHandler):
             self.connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         except OSError:
             pass
+
+    def parse_request(self) -> bool:
+        parsed = super().parse_request()
+        if parsed:
+            self.server.begin()
+            self.counted = True
+        return parsed
+
+    def handle_one_request(self) -> None:
+        self.counted = False
+        try:
+            super().handle_one_request()
+        finally:
+            if self.counted:
+                self.server.end()
 
     def log_message(self, format: str, *args: Any) -> None:  # noqa: A002 - stdlib signature
         log.debug("%s - %s", self.address_string(), format % args)
@@ -355,19 +374,75 @@ class Server(ThreadingHTTPServer):
     allow_reuse_address = True
     request_queue_size = 128
 
-    def __init__(self, address: tuple[str, int], app: App):
-        super().__init__(address, Handler)
+    def __init__(self, address: tuple[str, int], app: App, sock: socket.socket | None = None,
+                 idle_exit: float = 0):
+        super().__init__(address, Handler, bind_and_activate=sock is None)
+        if sock is not None:
+            self.socket.close()
+            self.socket = sock
+            self.server_address = sock.getsockname()
         self.app = app
         self.legacy = Legacy(app)
         self.rpc = Rpc(app)
+        self.idle_exit = idle_exit
+        self.idled = False
+        self._active = 0
+        self._last = time.monotonic()
+        self._activity = threading.Condition()
+
+    def begin(self) -> None:
+        with self._activity:
+            self._active += 1
+
+    def end(self) -> None:
+        with self._activity:
+            self._active -= 1
+            self._last = time.monotonic()
+            self._activity.notify_all()
+
+    def process_request(self, request: Any, client_address: Any) -> None:
+        # A new connection counts as activity before its request is parsed.
+        with self._activity:
+            self._last = time.monotonic()
+        super().process_request(request, client_address)
+
+    def service_actions(self) -> None:
+        # Runs on the accepting thread between polls, so no connection is accepted after the decision.
+        if not self.idle_exit or self.idled:
+            return
+        with self._activity:
+            idle = self._active == 0 and time.monotonic() - self._last >= self.idle_exit
+        if idle:
+            self.idled = True
+            log.info("no request for %ss, exiting", self.idle_exit)
+            threading.Thread(target=self.shutdown, daemon=True).start()
+
+    def drain(self) -> None:
+        """Wait for requests already being handled (a keep-alive connection may have sent one)."""
+        with self._activity:
+            self._activity.wait_for(lambda: self._active == 0)
 
     def handle_error(self, request: Any, client_address: Any) -> None:
         log.exception("unhandled error serving %s", client_address)
 
 
-def serve(app: App, host: str = "127.0.0.1", port: int = 8765, ready: threading.Event | None = None) -> None:
-    """Serve until SIGINT/SIGTERM, then close every collection cleanly."""
-    server = Server((host, port), app)
+def activated_socket() -> socket.socket | None:
+    """The listening socket systemd passed (sd_listen_fds), if this process was socket-activated."""
+    if os.environ.get("LISTEN_PID") != str(os.getpid()):
+        return None
+    count = int(os.environ.get("LISTEN_FDS") or 0)
+    for name in ("LISTEN_PID", "LISTEN_FDS", "LISTEN_FDNAMES"):
+        os.environ.pop(name, None)
+    if count != 1:
+        raise SystemExit(f"socket activation passed {count} sockets; anki-cli serves exactly one")
+    return socket.socket(fileno=3)
+
+
+def serve(app: App, host: str = "127.0.0.1", port: int = 8765, ready: threading.Event | None = None,
+          idle_exit: float = 0, sock: socket.socket | None = None) -> None:
+    """Serve until SIGINT/SIGTERM (or ``idle_exit`` seconds without a request), then close every
+    collection cleanly. ``sock`` (default: a socket-activation socket) replaces binding host:port."""
+    server = Server((host, port), app, sock or activated_socket(), idle_exit)
     stopping = threading.Event()
 
     def shutdown(*_: Any) -> None:
@@ -379,13 +454,15 @@ def serve(app: App, host: str = "127.0.0.1", port: int = 8765, ready: threading.
     if threading.current_thread() is threading.main_thread():
         signal.signal(signal.SIGTERM, shutdown)
         signal.signal(signal.SIGINT, shutdown)
-    log.info("anki-cli %s listening on http://%s:%s", __version__, host, server.server_address[1])
+    log.info("anki-cli %s listening on http://%s:%s", __version__, *server.server_address[:2])
     if ready is not None:
         ready.set()
     try:
         server.serve_forever(poll_interval=0.5)
     finally:
         server.server_close()
+        if server.idled:
+            server.drain()
         started = time.monotonic()
         app.close()
         log.info("collections closed in %.2fs", time.monotonic() - started)

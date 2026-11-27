@@ -109,7 +109,7 @@ def cmd_serve(args: argparse.Namespace) -> int:
     if args.preload:
         for name in profiles.names():
             profiles.host(name).run(lambda col: None)
-    serve(app, args.host, args.port)
+    serve(app, args.host, args.port, idle_exit=args.idle_exit)
     return 0
 
 
@@ -469,6 +469,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--allow-exit", action="store_true", help="allow guiExitAnki/application.exit to stop the server")
     p.add_argument("--backup-minutes", type=int, default=30, help="minutes between automatic backups (0: off)")
     p.add_argument("--idle-close", type=int, default=0, help="close collections idle this many seconds (0: never)")
+    p.add_argument("--idle-exit", type=int, default=int(os.environ.get("ANKICLI_IDLE_EXIT") or 0),
+                   help="exit after this many seconds without a request (0: never); for socket activation")
     p.add_argument("--preload", action="store_true", help="open every profile at startup")
     p.add_argument("--log-level", default="info", choices=["debug", "info", "warning", "error"])
 

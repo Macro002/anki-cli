@@ -1,0 +1,13 @@
+# Socket activation: systemd listens and starts anki-cli.service on the first
+# connection; with --idle-exit the server exits when idle and the next connection
+# starts it again. Install next to anki-cli.service, add `--idle-exit 300` to its
+# ExecStart (the --host/--port there are then unused) and drop its [Install] section, then
+#   systemctl daemon-reload && systemctl enable --now anki-cli.socket
+[Unit]
+Description=anki-cli (headless Anki server) socket
+
+[Socket]
+ListenStream=127.0.0.1:8765
+
+[Install]
+WantedBy=sockets.target

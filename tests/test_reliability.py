@@ -171,6 +171,74 @@ def test_sigterm_closes_cleanly(tmp_path):
         col.close()
 
 
+def test_idle_exit_waits_for_the_request_in_flight(tmp_path, monkeypatch):
+    """Idle exit never cuts a running request (a long sync, say); the idle clock starts when it ends."""
+    from ankicli.app import App
+    from ankicli.host import HostOptions
+    from ankicli.legacy import Legacy
+    from ankicli.profiles import Profiles
+    from ankicli.server import serve
+
+    handle = Legacy.handle
+
+    def slow(self, request, profile=None):
+        time.sleep(1.5)
+        return handle(self, request, profile=profile)
+
+    monkeypatch.setattr(Legacy, "handle", slow)
+    app = App(Profiles(tmp_path / "base", options=HostOptions(backup_minutes=0)))
+    listener = socket.create_server(("127.0.0.1", 0))
+    url = f"http://127.0.0.1:{listener.getsockname()[1]}"
+    ready = threading.Event()
+    server = threading.Thread(target=serve, args=(app,), kwargs={"ready": ready, "idle_exit": 0.5,
+                                                                 "sock": listener})
+    server.start()
+    assert ready.wait(10)
+    started = time.monotonic()
+    assert Client(url).legacy("deckNames") == ["Default"]
+    replied = time.monotonic()
+    assert replied - started >= 1.5 and server.is_alive()
+    server.join(10)
+    assert not server.is_alive() and time.monotonic() - replied >= 0.5
+
+
+LAUNCHER = """import os, sys
+os.dup2(int(sys.argv[1]), 3)
+os.environ.update(LISTEN_FDS="1", LISTEN_PID=str(os.getpid()))
+os.execv(sys.executable, [sys.executable, "-m", "ankicli", *sys.argv[2:]])
+"""
+
+
+@POSIX
+def test_socket_activation_and_idle_exit(tmp_path):
+    """Like systemd: the server takes the listening socket on fd 3, serves it and exits when idle;
+    connections made after the exit wait in the socket's backlog for the next instance."""
+    listener = socket.create_server(("127.0.0.1", 0))
+    url = f"http://127.0.0.1:{listener.getsockname()[1]}"
+
+    def activate() -> subprocess.Popen:
+        # --port 1 can't be bound: answering at all proves the passed socket is used.
+        return subprocess.Popen([sys.executable, "-c", LAUNCHER, str(listener.fileno()), "serve",
+                                 "--base", str(tmp_path / "base"), "--port", "1", "--backup-minutes", "0",
+                                 "--idle-exit", "2"], pass_fds=(listener.fileno(),))
+
+    processes = [activate()]
+    try:
+        assert Client(url).legacy("deckNames") == ["Default"]
+        assert Client(url).legacy("deckNames") == ["Default"]
+        assert processes[0].wait(30) == 0
+        pending = ThreadPoolExecutor(1).submit(Client(url).legacy, "deckNames")
+        time.sleep(0.5)
+        assert not pending.done()
+        processes.append(activate())
+        assert pending.result(60) == ["Default"]
+        assert processes[1].wait(30) == 0
+    finally:
+        for process in processes:
+            if process.poll() is None:
+                process.kill()
+
+
 def test_collection_locked_by_another_process(tmp_path):
     """A collection open elsewhere (Anki Desktop, another anki-cli) gives a clear error."""
     from anki.collection import Collection
