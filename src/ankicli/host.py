@@ -134,6 +134,7 @@ class CollectionHost:
         if self.options.backup_minutes and now - self._last_backup >= self.options.backup_minutes * 60:
             self._last_backup = now
             try:
+                self.backup_dir.mkdir(parents=True, exist_ok=True)
                 self.col.create_backup(backup_folder=str(self.backup_dir), force=False,
                                        wait_for_completion=False)
             except Exception:

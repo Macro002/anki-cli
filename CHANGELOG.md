@@ -13,6 +13,8 @@
   login and the full-sync choice, and profiles. It works on a local collection or against
   a server.
 * The CLI no longer crashes on consoles with a legacy code page (Windows cp1252).
+* Automatic backups (`--backup-minutes`) create the backups folder: until a manual backup
+  had made it, every automatic backup failed with "No such file or directory".
 
 ## 0.1.0 — 2026-10-26
 

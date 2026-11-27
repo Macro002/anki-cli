@@ -203,3 +203,24 @@ def test_large_batch_and_body_limits(client):
         sock.sendall(b"POST /api/v1 HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\n"
                      b"Content-Length: 17825792\r\n\r\n")
         assert sock.recv(1024).startswith(b"HTTP/1.1 413")
+
+
+def test_automatic_backup_creates_the_backups_folder(tmp_path):
+    from ankicli.host import HostOptions
+    from ankicli.profiles import Profiles
+
+    profiles = Profiles(tmp_path / "base", options=HostOptions(backup_minutes=1))
+    host = profiles.host(None)
+    try:
+        assert not host.backup_dir.exists()
+
+        def due_backup(col):
+            col.add_note(col.new_note(col.models.by_name("Basic")), 1)
+            host._last_backup -= 120
+            host._maintenance()
+            col._backend.await_backup_completion()
+
+        host.run(due_backup)
+        assert list(host.backup_dir.glob("*.colpkg"))
+    finally:
+        profiles.close()
